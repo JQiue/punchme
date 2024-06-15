@@ -1,3 +1,4 @@
+mod helper;
 mod hifini;
 
 use std::{env, error::Error};
@@ -14,7 +15,6 @@ async fn start() {
   let schedule = env::var("SCHEDULE_RULE").unwrap_or("10 24 12 * * * *".to_string());
   let sched = JobScheduler::new().await.expect("Canot create JobScheduler");
   let job = Job::new_tz(schedule.as_str(), chrono_tz::Asia::Shanghai, |_, _| {
-    println!(">>> HiFiNi");
     tokio::spawn(hifini::sign_in());
   })
   .expect("Canot create a new job");

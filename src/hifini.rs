@@ -1,7 +1,17 @@
 use std::env;
 
+use crate::helper::send_mail;
+
 use regex::Regex;
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE, COOKIE};
+use serde::{Deserialize, Serialize};
+use serde_json::from_str;
+
+#[derive(Serialize, Deserialize)]
+struct Data {
+  code: String,
+  message: String,
+}
 
 async fn get_sign_code() -> String {
   let cookie = env::var("HIFINI_COOKIE").expect("HIFINI_COOKIE 获取失败");
@@ -13,7 +23,6 @@ async fn get_sign_code() -> String {
     .send()
     .await
     .expect("Failed to send request");
-  let _status = response.status();
   let text = response.text().await.expect("Failed to get the response text");
   let regex = Regex::new(r#"sign\s*=\s*"([^"]+)""#).unwrap();
   let code = regex.captures(text.as_str()).and_then(|caps| caps.get(1)).map(|m| m.as_str().to_string()).unwrap();
@@ -36,8 +45,11 @@ pub async fn sign_in() {
     .await
     .expect("Failed to send request");
 
-  let status = response.status();
   let text = response.text().await.expect("Failed to get the response text");
-  println!("{status}");
-  println!("{text}");
+  let data: Data = from_str(&text).unwrap();
+  if data.code == "0" {
+    send_mail("Punchme HiFini 签到成功", data.message)
+  } else {
+    send_mail("Punchme HiFini 签到失败", data.message)
+  }
 }
